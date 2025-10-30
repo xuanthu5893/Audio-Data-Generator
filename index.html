@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Data Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Audio Data Generator</h1>
+            <button id="settingsBtn" class="settings-btn">⚙️ Settings</button>
+        </div>
+
+        <div class="input-section">
+            <label for="inputText">Enter Required Message (Must be included in conversation):</label>
+            <textarea id="inputText" rows="6" placeholder="Example: This program can make your dreams come true in just one day. No complicated steps, anyone can easily try it."></textarea>
+            <small style="color: #666; display: block; margin-top: 5px;">This message will be included in the conversation</small>
+        </div>
+
+        <button id="generateBtn" class="generate-btn">Generate</button>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p id="loadingText">Generating conversation...</p>
+        </div>
+
+        <div id="result" class="result" style="display: none;">
+            <h2>Result:</h2>
+            <div id="conversationOutput" class="conversation-output"></div>
+
+            <!-- Voice Selection Section -->
+            <div class="voice-selection-section">
+                <h3>🎙️ Select Voices for Audio</h3>
+                <div class="voice-selectors">
+                    <div class="voice-selector-group">
+                        <label for="voiceSelectA">Voice for A (Affiliate Marketer):</label>
+                        <select id="voiceSelectA" class="voice-select">
+                            <option value="pNInz6obpgDQGcFmaJgB">Adam - Deep Male</option>
+                            <option value="TxGEqnHWrfWFTfGW9XjX">Josh - Young Male</option>
+                            <option value="VR6AewLTigWG4xSOukaG">Arnold - Crisp Male</option>
+                            <option value="ErXwobaYiN019PkySvjV">Antoni - Well Rounded Male</option>
+                            <option value="EXAVITQu4vr4xnSDxMaL">Bella - Soft Female</option>
+                            <option value="ThT5KcBeYPX3keUQqHPh">Dorothy - Pleasant Female</option>
+                        </select>
+                    </div>
+                    <div class="voice-selector-group">
+                        <label for="voiceSelectB">Voice for B (Prospect Customer):</label>
+                        <select id="voiceSelectB" class="voice-select">
+                            <option value="EXAVITQu4vr4xnSDxMaL">Bella - Soft Female</option>
+                            <option value="ThT5KcBeYPX3keUQqHPh">Dorothy - Pleasant Female</option>
+                            <option value="pNInz6obpgDQGcFmaJgB">Adam - Deep Male</option>
+                            <option value="TxGEqnHWrfWFTfGW9XjX">Josh - Young Male</option>
+                            <option value="VR6AewLTigWG4xSOukaG">Arnold - Crisp Male</option>
+                            <option value="ErXwobaYiN019PkySvjV">Antoni - Well Rounded Male</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="copyBtn" class="copy-btn">📋 Copy</button>
+                <button id="convertToAudioBtn" class="convert-audio-btn">🎵 Convert to Audio</button>
+            </div>
+        </div>
+
+        <div id="audioPlayer" class="audio-player" style="display: none;">
+            <h2>Audio Player:</h2>
+            <audio id="audioElement" controls></audio>
+            <div class="audio-controls">
+                <div class="speed-control">
+                    <label for="audioSpeed">⚡ Playback Speed:</label>
+                    <select id="audioSpeed" class="speed-select">
+                        <option value="0.5">0.5x (Slow)</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1" selected>1x (Normal)</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x (Fast)</option>
+                        <option value="1.75">1.75x</option>
+                        <option value="2">2x (Very Fast)</option>
+                    </select>
+                </div>
+                <button id="downloadAudioBtn" class="download-btn">⬇️ Download Audio</button>
+            </div>
+        </div>
+
+        <!-- CSV Batch Processing Section -->
+        <div class="csv-batch-section">
+            <h2>📊 CSV Batch Processing</h2>
+            <p class="description">Import a CSV file with 2 columns: NG Word, Sentence</p>
+
+            <div class="csv-upload-section">
+                <label for="csvFileInput" class="csv-upload-label">
+                    📁 Select CSV File
+                    <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                </label>
+                <span id="csvFileName" class="csv-file-name">No file selected</span>
+            </div>
+
+            <button id="processCsvBtn" class="process-csv-btn" style="display: none;">🚀 Process CSV & Generate Audio</button>
+
+            <div id="csvProgress" class="csv-progress" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progressBarFill" class="progress-bar-fill"></div>
+                </div>
+                <p id="csvProgressText" class="progress-text">Processing: 0/0</p>
+            </div>
+
+            <div id="csvResults" class="csv-results" style="display: none;">
+                <h3>Results:</h3>
+                <div class="results-actions">
+                    <button id="downloadAllCsvBtn" class="download-all-btn">💾 Download All as CSV</button>
+                    <button id="downloadAllAudioBtn" class="download-all-audio-btn">🎵 Download All Audio (ZIP)</button>
+                </div>
+                <table id="resultsTable" class="results-table">
+                    <thead>
+                        <tr>
+                            <th>NG Word</th>
+                            <th>Conversation</th>
+                            <th>Audio</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label for="openaiApiKey">OpenAI API Key:</label>
+                    <input type="password" id="openaiApiKey" placeholder="sk-...">
+                </div>
+                <div class="setting-group">
+                    <label for="openaiModel">OpenAI Model:</label>
+                    <select id="openaiModel">
+                        <option value="gpt-4o-mini">gpt-4o-mini (Default - Fast & Cheap)</option>
+                        <option value="gpt-4o">gpt-4o (Most Capable)</option>
+                        <option value="gpt-4-turbo">gpt-4-turbo</option>
+                        <option value="gpt-4">gpt-4</option>
+                        <option value="gpt-3.5-turbo">gpt-3.5-turbo (Cheapest)</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="elevenlabsApiKey">ElevenLabs API Key (xi-api-key):</label>
+                    <input type="password" id="elevenlabsApiKey" placeholder="sk_...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveSettingsBtn" class="save-btn">💾 Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
