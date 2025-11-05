@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Review - Audio Data Generator</title>
+    <link rel="stylesheet" href="review-style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Audio Data Review</h1>
+            <a href="index.html" class="back-btn">← Back to Generator</a>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-card">
+                <h2>📄 Import CSV File</h2>
+                <p class="description">CSV with columns: NG Word, Sentence, Conversation</p>
+                <label for="csvInput" class="upload-label">
+                    📁 Select CSV File
+                    <input type="file" id="csvInput" accept=".csv" style="display: none;">
+                </label>
+                <span id="csvStatus" class="file-status">No file selected</span>
+            </div>
+
+            <div class="upload-card">
+                <h2>🎵 Import Audio Files</h2>
+                <p class="description">Select multiple audio files or entire folder</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <label for="audioFilesInput" class="upload-label" style="flex: 1; text-align: center; margin: 0;">
+                        📄 Select Files
+                        <input type="file" id="audioFilesInput" accept="audio/*" multiple style="display: none;">
+                    </label>
+                    <label for="audioFolderInput" class="upload-label" style="flex: 1; text-align: center; margin: 0;">
+                        📁 Select Folder
+                        <input type="file" id="audioFolderInput" webkitdirectory directory style="display: none;">
+                    </label>
+                </div>
+                <span id="audioStatus" class="file-status">No files selected</span>
+            </div>
+        </div>
+
+        <button id="loadDataBtn" class="load-btn" style="display: none;">🚀 Load & Display Data</button>
+
+        <div id="dataDisplay" class="data-display" style="display: none;">
+            <div class="display-header">
+                <h2>Review Results</h2>
+                <div class="display-actions">
+                    <button id="exportCsvBtn" class="action-btn export-btn">💾 Export CSV</button>
+                    <button id="filterBtn" class="action-btn filter-btn">🔍 Filter</button>
+                    <input type="text" id="searchInput" placeholder="Search NG Word..." class="search-input">
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalCount">0</div>
+                    <div class="stat-label">Total Items</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="audioCount">0</div>
+                    <div class="stat-label">With Audio</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="noAudioCount">0</div>
+                    <div class="stat-label">No Audio</div>
+                </div>
+            </div>
+
+            <table class="review-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">#</th>
+                        <th style="width: 50%;">NG Word</th>
+                        <th style="width: 22%;">Type</th>
+                        <th style="width: 20%;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="reviewTableBody">
+                </tbody>
+            </table>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <p>No data to display</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="detail-modal">
+        <div class="detail-modal-content">
+            <div class="detail-modal-header">
+                <div class="modal-title-section">
+                    <h2 id="modalTitle" class="modal-title"></h2>
+                    <div id="modalTypeBadge" class="modal-type-badge" style="display: none;"></div>
+                </div>
+                <button class="modal-close-btn" id="closeDetailModal">&times;</button>
+            </div>
+
+            <div class="detail-modal-body">
+                <!-- Audio Player Section -->
+                <div class="modal-audio-section" id="modalAudioSection" style="display: none;">
+                    <div class="audio-file-info" id="audioFileInfo"></div>
+                    <audio id="modalAudio" controls class="modal-audio-player"></audio>
+                </div>
+
+                <div class="modal-no-audio" id="modalNoAudio" style="display: none;">
+                    <p class="no-audio-message">❌ No audio available for this item</p>
+                </div>
+
+                <!-- Conversation Section -->
+                <div class="modal-section" id="modalConversationSection" style="display: none;">
+                    <h3 class="section-title">💬 Conversation</h3>
+                    <div class="section-content conversation-content" id="modalConversation"></div>
+                </div>
+
+                <!-- Verification Section -->
+                <div class="modal-section">
+                    <button id="toggleVerificationBtn" class="toggle-verification-btn">
+                        🔍 Show Verification Tool
+                    </button>
+
+                    <div id="verificationSection" class="verification-section" style="display: none;">
+                        <h3 class="section-title">✅ Text Verification</h3>
+                        <p class="section-description">Paste transcribed text from LiveKit or other STT service to compare with original conversation.</p>
+
+                        <div class="verification-options">
+                            <label class="option-label">
+                                <input type="checkbox" id="ignoreFormatting" checked>
+                                <span>Ignore formatting & speaker labels (Recommended for STT transcripts)</span>
+                            </label>
+                        </div>
+
+                        <div class="verification-input">
+                            <label for="transcribedInput">Transcribed Text:</label>
+                            <textarea id="transcribedInput" rows="10" placeholder="Paste transcribed text here...&#10;&#10;Example from STT:&#10;こんにちは今日は良い天気ですねはい本当にそうですね"></textarea>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <button id="compareTextBtn" class="compare-text-btn" style="flex: 1;">📊 Compare Texts</button>
+                            <button id="aiCheckBtn" class="ai-check-btn" style="flex: 1;">🤖 Check with AI</button>
+                        </div>
+
+                        <button id="showDebugBtn" class="export-debug-btn" style="margin-top: 10px;">🔍 Show Debug Log</button>
+
+                        <div id="comparisonResult" class="comparison-result" style="display: none;">
+                            <div class="result-header">
+                                <h4>Comparison Results</h4>
+                                <div class="accuracy-badge" id="accuracyBadge">
+                                    <span class="accuracy-label">Accuracy:</span>
+                                    <span class="accuracy-value" id="accuracyValue">0%</span>
+                                </div>
+                            </div>
+
+                            <div class="comparison-grid">
+                                <div class="comparison-column">
+                                    <h5>📄 Original Conversation</h5>
+                                    <div class="comparison-text" id="originalCompareText"></div>
+                                </div>
+                                <div class="comparison-column">
+                                    <h5>🎤 Transcribed Text</h5>
+                                    <div class="comparison-text" id="transcribedCompareText"></div>
+                                </div>
+                            </div>
+
+                            <div class="diff-section">
+                                <h5>🔍 Differences</h5>
+                                <div class="diff-stats">
+                                    <span class="stat-item">
+                                        <span class="stat-label">Matching:</span>
+                                        <span class="stat-value" id="matchingChars">0</span>
+                                    </span>
+                                    <span class="stat-item">
+                                        <span class="stat-label">Different:</span>
+                                        <span class="stat-value" id="differentChars">0</span>
+                                    </span>
+                                    <span class="stat-item">
+                                        <span class="stat-label">Total:</span>
+                                        <span class="stat-value" id="totalChars">0</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Analysis Result -->
+                        <div id="aiAnalysisResult" class="ai-analysis-result" style="display: none;">
+                            <div class="result-header">
+                                <h4>🤖 AI Analysis</h4>
+                            </div>
+                            <div id="aiAnalysisContent" class="ai-analysis-content"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Log Modal -->
+    <div id="debugModal" class="detail-modal">
+        <div class="detail-modal-content" style="max-width: 1200px;">
+            <div class="detail-modal-header">
+                <h2 class="modal-title">🔍 Debug Log</h2>
+                <button class="modal-close-btn" id="closeDebugModal">&times;</button>
+            </div>
+            <div class="detail-modal-body">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button id="copyDebugBtn" class="action-btn export-btn" style="flex: 1;">📋 Copy to Clipboard</button>
+                    <button id="downloadDebugBtn" class="action-btn export-btn" style="flex: 1;">💾 Download as File</button>
+                </div>
+                <pre id="debugLogContent" style="background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; overflow-x: auto; max-height: 600px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.5;"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="review-script.js"></script>
+</body>
+</html>
