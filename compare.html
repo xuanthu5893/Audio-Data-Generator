@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Compare - Audio Data Generator</title>
+    <link rel="stylesheet" href="compare-style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 Text Compare</h1>
+            <div class="header-actions">
+                <a href="review.html" class="back-btn">← Back to Review</a>
+                <a href="index.html" class="back-btn">🏠 Home</a>
+            </div>
+        </div>
+
+        <div class="compare-container">
+            <div class="text-input-section">
+                <div class="input-column">
+                    <div class="input-header">
+                        <h3>Text 1 (Original)</h3>
+                        <button class="clear-btn" id="clearText1">Clear</button>
+                    </div>
+                    <textarea id="text1" placeholder="Paste or type your first text here..."></textarea>
+                    <div class="char-count">Characters: <span id="count1">0</span></div>
+                </div>
+
+                <div class="compare-controls">
+                    <button id="compareBtn" class="compare-btn">🔍 Compare</button>
+                    <button id="swapBtn" class="swap-btn">⇄ Swap</button>
+                </div>
+
+                <div class="input-column">
+                    <div class="input-header">
+                        <h3>Text 2 (Modified)</h3>
+                        <button class="clear-btn" id="clearText2">Clear</button>
+                    </div>
+                    <textarea id="text2" placeholder="Paste or type your second text here..."></textarea>
+                    <div class="char-count">Characters: <span id="count2">0</span></div>
+                </div>
+            </div>
+
+            <div class="options-section">
+                <h4>Compare Options:</h4>
+                <div class="options-grid">
+                    <label class="option-label">
+                        <input type="checkbox" id="ignoreCase" checked>
+                        <span>Ignore case (A = a)</span>
+                    </label>
+                    <label class="option-label">
+                        <input type="checkbox" id="ignoreWhitespace" checked>
+                        <span>Ignore whitespace differences</span>
+                    </label>
+                    <label class="option-label">
+                        <input type="checkbox" id="ignorePunctuation">
+                        <span>Ignore punctuation</span>
+                    </label>
+                    <label class="option-label">
+                        <input type="checkbox" id="ignoreLineBreaks">
+                        <span>Ignore line breaks</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="resultsSection" class="results-section" style="display: none;">
+                <div class="results-header">
+                    <h2>Comparison Results</h2>
+                    <div class="results-actions">
+                        <button id="exportBtn" class="action-btn">💾 Export Report</button>
+                        <button id="copyDiffBtn" class="action-btn">📋 Copy Differences</button>
+                    </div>
+                </div>
+
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <span class="stat-label">Similarity:</span>
+                        <span class="stat-value" id="similarityPercent">0%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Differences:</span>
+                        <span class="stat-value" id="diffCount">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Added:</span>
+                        <span class="stat-value added" id="addedCount">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Removed:</span>
+                        <span class="stat-value removed" id="removedCount">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Modified:</span>
+                        <span class="stat-value modified" id="modifiedCount">0</span>
+                    </div>
+                </div>
+
+                <div class="diff-display">
+                    <div class="diff-column">
+                        <h4>Text 1 (Original)</h4>
+                        <div id="diff1" class="diff-content"></div>
+                    </div>
+                    <div class="diff-column">
+                        <h4>Text 2 (Modified)</h4>
+                        <div id="diff2" class="diff-content"></div>
+                    </div>
+                </div>
+
+                <div class="legend">
+                    <h4>Legend:</h4>
+                    <div class="legend-items">
+                        <span class="legend-item"><span class="highlight-removed">Red</span> = Removed/Deleted</span>
+                        <span class="legend-item"><span class="highlight-added">Green</span> = Added/Inserted</span>
+                        <span class="legend-item"><span class="highlight-modified">Yellow</span> = Modified/Changed</span>
+                        <span class="legend-item"><span class="highlight-same">White</span> = Same/Unchanged</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="compare-script.js"></script>
+</body>
+</html>

@@ -10,7 +10,10 @@
     <div class="container">
         <div class="header">
             <h1>📊 Audio Data Review</h1>
-            <a href="index.html" class="back-btn">← Back to Generator</a>
+            <div class="header-actions">
+                <a href="compare.html" class="back-btn">📝 Text Compare</a>
+                <a href="index.html" class="back-btn">← Back to Generator</a>
+            </div>
         </div>
 
         <div class="upload-section">
@@ -138,57 +141,160 @@
                         </div>
 
                         <div style="display: flex; gap: 10px;">
-                            <button id="compareTextBtn" class="compare-text-btn" style="flex: 1;">📊 Compare Texts</button>
+                            <button id="compareTextBtn" class="compare-text-btn" style="flex: 1;">📊 Quick Compare</button>
+                            <button id="advancedCompareBtn" class="advanced-compare-btn" style="flex: 1;">🔍 Advanced Compare</button>
                             <button id="aiCheckBtn" class="ai-check-btn" style="flex: 1;">🤖 Check with AI</button>
                         </div>
 
                         <button id="showDebugBtn" class="export-debug-btn" style="margin-top: 10px;">🔍 Show Debug Log</button>
 
-                        <div id="comparisonResult" class="comparison-result" style="display: none;">
-                            <div class="result-header">
-                                <h4>Comparison Results</h4>
+                        <!-- Advanced Comparison Result -->
+                        <div id="advancedComparisonResult" class="advanced-comparison-result" style="display: none; margin-top: 20px;">
+                            <div class="result-header" style="cursor: pointer;" id="advancedComparisonResultHeader">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span id="advancedComparisonToggleIcon">▼</span>
+                                    <h4 style="margin: 0;">🔍 Advanced Comparison Results</h4>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button id="advancedExportBtn" class="action-btn" style="padding: 6px 12px; font-size: 13px;" onclick="event.stopPropagation();">💾 Export</button>
+                                    <button id="advancedCopyBtn" class="action-btn" style="padding: 6px 12px; font-size: 13px;" onclick="event.stopPropagation();">📋 Copy</button>
+                                </div>
+                            </div>
+
+                            <div id="advancedComparisonResultBody" style="display: block;">
+                                <!-- Options -->
+                                <div class="options-section" style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                                    <h4 style="margin-bottom: 10px; font-size: 13px;">Compare Options:</h4>
+                                    <div class="options-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 12px;">
+                                        <label class="option-label" style="font-size: 13px;">
+                                            <input type="checkbox" id="advIgnoreCase" checked>
+                                            <span>Ignore case (A = a)</span>
+                                        </label>
+                                        <label class="option-label" style="font-size: 13px;">
+                                            <input type="checkbox" id="advIgnoreWhitespace" checked>
+                                            <span>Ignore whitespace</span>
+                                        </label>
+                                        <label class="option-label" style="font-size: 13px;">
+                                            <input type="checkbox" id="advIgnorePunctuation">
+                                            <span>Ignore punctuation</span>
+                                        </label>
+                                        <label class="option-label" style="font-size: 13px;">
+                                            <input type="checkbox" id="advIgnoreLineBreaks">
+                                            <span>Ignore line breaks</span>
+                                        </label>
+                                    </div>
+
+                                    <!-- Ignore Patterns -->
+                                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                                        <label style="display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #374151;">
+                                            🚫 Ignore Patterns (one per line):
+                                        </label>
+                                        <textarea id="advIgnorePatterns" rows="3" placeholder="A:&#10;B:&#10;[thinking]&#10;[smiles]" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; font-family: 'Courier New', monospace; resize: vertical;"></textarea>
+                                        <button id="saveIgnorePatternsBtn" class="action-btn" style="margin-top: 6px; padding: 4px 10px; font-size: 11px;">💾 Save Patterns</button>
+                                        <span id="savePatternsFeedback" style="margin-left: 8px; font-size: 11px; color: #10b981; display: none;">✓ Saved!</span>
+                                    </div>
+                                </div>
+
+                                <!-- Stats -->
+                                <div class="stats-bar" style="display: flex; justify-content: space-around; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 12px; border-radius: 8px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                                    <div class="stat-item" style="text-align: center;">
+                                        <span class="stat-label" style="display: block; font-size: 10px; color: #64748b; margin-bottom: 3px; font-weight: 600; text-transform: uppercase;">Similarity:</span>
+                                        <span class="stat-value" style="display: block; font-size: 18px; font-weight: 700;" id="advSimilarityPercent">0%</span>
+                                    </div>
+                                    <div class="stat-item" style="text-align: center;">
+                                        <span class="stat-label" style="display: block; font-size: 10px; color: #64748b; margin-bottom: 3px; font-weight: 600; text-transform: uppercase;">Differences:</span>
+                                        <span class="stat-value" style="display: block; font-size: 18px; font-weight: 700;" id="advDiffCount">0</span>
+                                    </div>
+                                    <div class="stat-item" style="text-align: center;">
+                                        <span class="stat-label" style="display: block; font-size: 10px; color: #64748b; margin-bottom: 3px; font-weight: 600; text-transform: uppercase;">Added:</span>
+                                        <span class="stat-value" style="display: block; font-size: 18px; font-weight: 700; color: #10b981;" id="advAddedCount">0</span>
+                                    </div>
+                                    <div class="stat-item" style="text-align: center;">
+                                        <span class="stat-label" style="display: block; font-size: 10px; color: #64748b; margin-bottom: 3px; font-weight: 600; text-transform: uppercase;">Removed:</span>
+                                        <span class="stat-value" style="display: block; font-size: 18px; font-weight: 700; color: #ef4444;" id="advRemovedCount">0</span>
+                                    </div>
+                                </div>
+
+                                <!-- Diff Display -->
+                                <div class="diff-display" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+                                    <div class="diff-column">
+                                        <h4 style="background: #f3f4f6; padding: 8px 10px; border-radius: 6px 6px 0 0; margin-bottom: 0; font-size: 12px;">📄 Original Conversation</h4>
+                                        <div id="advDiff1" class="diff-content" style="background: white; border: 2px solid #e5e7eb; border-radius: 0 0 6px 6px; padding: 12px; min-height: 200px; max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.6; white-space: pre-wrap;"></div>
+                                    </div>
+                                    <div class="diff-column">
+                                        <h4 style="background: #f3f4f6; padding: 8px 10px; border-radius: 6px 6px 0 0; margin-bottom: 0; font-size: 12px;">🎤 Transcribed Text</h4>
+                                        <div id="advDiff2" class="diff-content" style="background: white; border: 2px solid #e5e7eb; border-radius: 0 0 6px 6px; padding: 12px; min-height: 200px; max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.6; white-space: pre-wrap;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Legend -->
+                                <div class="legend" style="background: #f9fafb; padding: 10px 12px; border-radius: 6px; border-left: 4px solid #667eea;">
+                                    <h4 style="margin-bottom: 6px; font-size: 12px;">Legend:</h4>
+                                    <div class="legend-items" style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px;">
+                                        <span><span class="highlight-removed">Red</span> = Removed</span>
+                                        <span><span class="highlight-added">Green</span> = Added</span>
+                                        <span><span class="highlight-same">White</span> = Same</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Comparison Result -->
+                        <div id="comparisonResult" class="comparison-result" style="display: none; margin-top: 20px;">
+                            <div class="result-header" style="cursor: pointer;" id="comparisonResultHeader">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span id="comparisonToggleIcon">▼</span>
+                                    <h4 style="margin: 0;">📊 Quick Comparison Results</h4>
+                                </div>
                                 <div class="accuracy-badge" id="accuracyBadge">
                                     <span class="accuracy-label">Accuracy:</span>
                                     <span class="accuracy-value" id="accuracyValue">0%</span>
                                 </div>
                             </div>
 
-                            <div class="comparison-grid">
-                                <div class="comparison-column">
-                                    <h5>📄 Original Conversation</h5>
-                                    <div class="comparison-text" id="originalCompareText"></div>
+                            <div id="comparisonResultBody" style="display: block;">
+                                <div class="comparison-grid">
+                                    <div class="comparison-column">
+                                        <h5>📄 Original Conversation</h5>
+                                        <div class="comparison-text" id="originalCompareText"></div>
+                                    </div>
+                                    <div class="comparison-column">
+                                        <h5>🎤 Transcribed Text</h5>
+                                        <div class="comparison-text" id="transcribedCompareText"></div>
+                                    </div>
                                 </div>
-                                <div class="comparison-column">
-                                    <h5>🎤 Transcribed Text</h5>
-                                    <div class="comparison-text" id="transcribedCompareText"></div>
-                                </div>
-                            </div>
 
-                            <div class="diff-section">
-                                <h5>🔍 Differences</h5>
-                                <div class="diff-stats">
-                                    <span class="stat-item">
-                                        <span class="stat-label">Matching:</span>
-                                        <span class="stat-value" id="matchingChars">0</span>
-                                    </span>
-                                    <span class="stat-item">
-                                        <span class="stat-label">Different:</span>
-                                        <span class="stat-value" id="differentChars">0</span>
-                                    </span>
-                                    <span class="stat-item">
-                                        <span class="stat-label">Total:</span>
-                                        <span class="stat-value" id="totalChars">0</span>
-                                    </span>
+                                <div class="diff-section">
+                                    <h5>🔍 Differences</h5>
+                                    <div class="diff-stats">
+                                        <span class="stat-item">
+                                            <span class="stat-label">Matching:</span>
+                                            <span class="stat-value" id="matchingChars">0</span>
+                                        </span>
+                                        <span class="stat-item">
+                                            <span class="stat-label">Different:</span>
+                                            <span class="stat-value" id="differentChars">0</span>
+                                        </span>
+                                        <span class="stat-item">
+                                            <span class="stat-label">Total:</span>
+                                            <span class="stat-value" id="totalChars">0</span>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- AI Analysis Result -->
-                        <div id="aiAnalysisResult" class="ai-analysis-result" style="display: none;">
-                            <div class="result-header">
-                                <h4>🤖 AI Analysis</h4>
+                        <div id="aiAnalysisResult" class="ai-analysis-result" style="display: none; margin-top: 20px;">
+                            <div class="result-header" style="cursor: pointer;" id="aiAnalysisResultHeader">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span id="aiAnalysisToggleIcon">▼</span>
+                                    <h4 style="margin: 0;">🤖 AI Analysis</h4>
+                                </div>
                             </div>
-                            <div id="aiAnalysisContent" class="ai-analysis-content"></div>
+                            <div id="aiAnalysisResultBody" style="display: block;">
+                                <div id="aiAnalysisContent" class="ai-analysis-content"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
