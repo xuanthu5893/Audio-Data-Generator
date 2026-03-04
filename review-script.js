@@ -1158,10 +1158,12 @@ function normalizeForASR(text) {
     ""
   );
   // Remove punctuation (Japanese/English)
-  t = t.replace(/[.,!?;:「」『』（）“”„〜…・—\-、。・，；？！]/g, "");
-  // Unicode normalize
+  t = t.replace(/[.,!?;:「」『』（）""„〜…・—\-、。・，；？！]/g, "");
+  // Unicode normalize (NFKC converts full-width to half-width)
   t = t.normalize("NFKC");
-  // Collapse whitespace
+  // Replace full-width spaces (　) with regular spaces
+  t = t.replace(/　/g, " ");
+  // Collapse all whitespace (including tabs, newlines) to single space
   t = t.replace(/\s+/g, " ").trim();
   // Lowercase for Latin
   t = t.replace(/[A-Za-z]/g, (c) => c.toLowerCase());
@@ -1175,8 +1177,12 @@ function compareTexts(text1, text2) {
   const normalized2 = normalizeForASR(text2);
 
   // 1. Character Error Rate (CER) - Character-level accuracy
-  const charDistance = levenshteinDistance(normalized1, normalized2);
-  const refCharLength = normalized1.length;
+  // Remove ALL whitespace for pure character comparison
+  const normalized1NoSpace = normalized1.replace(/\s+/g, "");
+  const normalized2NoSpace = normalized2.replace(/\s+/g, "");
+
+  const charDistance = levenshteinDistance(normalized1NoSpace, normalized2NoSpace);
+  const refCharLength = normalized1NoSpace.length;
   const cer = refCharLength === 0 ? 0 : (charDistance / refCharLength) * 100;
   const charAccuracy = Math.max(0, 100 - cer);
 
@@ -1559,14 +1565,18 @@ function generateDiff(text1, text2, alreadyCleaned = true) {
 
 // Calculate similarity between two sentences (0-100%)
 function calculateSimilarity(str1, str2) {
+  // Remove all whitespace and normalize for comparison
   const norm1 = str1.replace(/\s+/g, "").toLowerCase();
   const norm2 = str2.replace(/\s+/g, "").toLowerCase();
 
-  const maxLen = Math.max(norm1.length, norm2.length);
-  if (maxLen === 0) return 100;
+  // Use reference (first text) length for consistency with CER calculation
+  const refLen = norm1.length;
+  if (refLen === 0) return norm2.length === 0 ? 100 : 0;
 
   const distance = levenshteinDistance(norm1, norm2);
-  return ((1 - distance / maxLen) * 100).toFixed(1);
+  // Similarity = 100% - Error Rate
+  const similarity = Math.max(0, 100 - (distance / refLen * 100));
+  return similarity.toFixed(1);
 }
 
 // Find best matching sentence from arr2 for a sentence in arr1

@@ -305,16 +305,40 @@ convertToAudioBtn.addEventListener("click", async () => {
 });
 
 // Parse conversation from text to ElevenLabs format
+// Supports formats:
+//   A: text / B: text
+//   🧑‍💼営業: text / 👤顧客: text  (with optional 「」 and ✅)
 function parseConversation(conversation, voiceId1, voiceId2) {
   const lines = conversation.split("\n").filter((line) => line.trim());
   const inputs = [];
 
   for (const line of lines) {
-    // Find pattern "A: text" or "B: text"
-    const match = line.match(/^(?:Speaker\s+)?([AB]):\s*(.+)$/i);
-    if (match) {
-      const speaker = match[1].toUpperCase();
-      const text = match[2].trim();
+    let speaker = null;
+    let text = null;
+
+    // Format: A: text or B: text
+    const abMatch = line.match(/^(?:Speaker\s+)?([AB]):\s*(.+)$/i);
+    if (abMatch) {
+      speaker = abMatch[1].toUpperCase();
+      text = abMatch[2].trim();
+    }
+
+    // Format: 🧑‍💼営業: text or 👤顧客: text
+    if (!speaker) {
+      const emojiMatch = line.match(/^(🧑‍💼営業|👤顧客)[:：]\s*(.+)$/);
+      if (emojiMatch) {
+        speaker = emojiMatch[1] === "🧑‍💼営業" ? "A" : "B";
+        text = emojiMatch[2].trim();
+      }
+    }
+
+    if (speaker && text) {
+      // Strip 「」 Japanese brackets and trailing ✅
+      text = text
+        .replace(/^「/, "")
+        .replace(/」\s*✅?\s*$/, "")
+        .replace(/✅\s*$/, "")
+        .trim();
 
       if (text) {
         inputs.push({
@@ -386,6 +410,89 @@ inputText.addEventListener("keydown", (e) => {
     e.preventDefault();
     generateBtn.click();
   }
+});
+
+// ==========================================
+// Gen Audio from Existing Conversation
+// ==========================================
+
+const existingConversationInput = document.getElementById("existingConversationInput");
+const genAudioFromConversationBtn = document.getElementById("genAudioFromConversationBtn");
+const existingVoiceSelectA = document.getElementById("existingVoiceSelectA");
+const existingVoiceSelectB = document.getElementById("existingVoiceSelectB");
+const existingConvLoading = document.getElementById("existingConvLoading");
+const existingConvAudioPlayer = document.getElementById("existingConvAudioPlayer");
+const existingConvAudioElement = document.getElementById("existingConvAudioElement");
+const existingConvAudioSpeed = document.getElementById("existingConvAudioSpeed");
+const existingConvDownloadBtn = document.getElementById("existingConvDownloadBtn");
+
+let existingConvAudioBlob = null;
+
+genAudioFromConversationBtn.addEventListener("click", async () => {
+  const conversation = existingConversationInput.value.trim();
+  const settings = loadSettings();
+
+  if (!conversation) {
+    alert("Please paste a conversation first!");
+    return;
+  }
+
+  if (!settings.elevenlabsApiKey) {
+    alert("Please configure ElevenLabs API Key in Settings!");
+    settingsModal.style.display = "block";
+    return;
+  }
+
+  const voiceA = existingVoiceSelectA.value;
+  const voiceB = existingVoiceSelectB.value;
+  const dialogueInputs = parseConversation(conversation, voiceA, voiceB);
+
+  if (dialogueInputs.length === 0) {
+    alert('Cannot parse conversation. Please check format:\n• A: text / B: text\n• 🧑‍💼営業: text / 👤顧客: text');
+    return;
+  }
+
+  genAudioFromConversationBtn.disabled = true;
+  existingConvLoading.style.display = "block";
+  existingConvAudioPlayer.style.display = "none";
+
+  try {
+    const audioBlob = await convertToAudio(dialogueInputs, settings.elevenlabsApiKey);
+    existingConvAudioBlob = audioBlob;
+
+    existingConvAudioElement.src = URL.createObjectURL(audioBlob);
+    existingConvAudioPlayer.style.display = "block";
+    existingConvAudioPlayer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (error) {
+    console.error("Error:", error);
+    alert("An error occurred while generating audio: " + error.message);
+  } finally {
+    existingConvLoading.style.display = "none";
+    genAudioFromConversationBtn.disabled = false;
+  }
+});
+
+existingConvAudioSpeed.addEventListener("change", (e) => {
+  existingConvAudioElement.playbackRate = parseFloat(e.target.value);
+});
+
+existingConvAudioElement.addEventListener("loadedmetadata", () => {
+  existingConvAudioElement.playbackRate = parseFloat(existingConvAudioSpeed.value);
+});
+
+existingConvDownloadBtn.addEventListener("click", () => {
+  if (!existingConvAudioBlob) {
+    alert("No audio to download!");
+    return;
+  }
+  const url = URL.createObjectURL(existingConvAudioBlob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `conversation_${Date.now()}.mp3`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 });
 
 // ==========================================
@@ -695,4 +802,421 @@ downloadAllAudioBtn.addEventListener("click", async () => {
       downloadSingleAudio(audioResults[i].audioBlob, audioResults[i].ngWord);
     }
   }
+});
+
+// ==========================================
+// Batch Import Conversations
+// ==========================================
+
+const batchConvCsvInput = document.getElementById("batchConvCsvInput");
+const batchConvCsvName = document.getElementById("batchConvCsvName");
+const batchConvTableWrap = document.getElementById("batchConvTableWrap");
+const batchGenAllBtn = document.getElementById("batchGenAllBtn");
+const batchDownloadAllBtn = document.getElementById("batchDownloadAllBtn");
+const batchConvProgress = document.getElementById("batchConvProgress");
+const batchProgressFill = document.getElementById("batchProgressFill");
+const batchProgressText = document.getElementById("batchProgressText");
+const batchConvTableBody = document.getElementById("batchConvTableBody");
+
+// { id, content, voiceA, voiceB, audioBlob }
+let batchConvRows = [];
+
+const voiceOptions = [
+  { value: "pNInz6obpgDQGcFmaJgB", label: "Adam (Male)" },
+  { value: "TxGEqnHWrfWFTfGW9XjX", label: "Josh (Male)" },
+  { value: "VR6AewLTigWG4xSOukaG", label: "Arnold (Male)" },
+  { value: "ErXwobaYiN019PkySvjV", label: "Antoni (Male)" },
+  { value: "EXAVITQu4vr4xnSDxMaL", label: "Bella (Female)" },
+  { value: "ThT5KcBeYPX3keUQqHPh", label: "Dorothy (Female)" },
+];
+
+// Robust CSV parser that handles quoted multi-line fields
+function parseCSVFull(csvText) {
+  const results = [];
+  let i = 0;
+  const n = csvText.length;
+
+  // Skip header line
+  while (i < n && csvText[i] !== "\n") i++;
+  i++; // past \n
+
+  while (i < n) {
+    const fields = [];
+
+    // Parse one row
+    while (true) {
+      let field = "";
+
+      if (i < n && csvText[i] === '"') {
+        i++; // skip opening quote
+        while (i < n) {
+          if (csvText[i] === '"') {
+            if (i + 1 < n && csvText[i + 1] === '"') {
+              field += '"';
+              i += 2;
+            } else {
+              i++; // skip closing quote
+              break;
+            }
+          } else {
+            field += csvText[i++];
+          }
+        }
+      } else {
+        // Unquoted field — stop at comma or newline
+        while (i < n && csvText[i] !== "," && csvText[i] !== "\n" && csvText[i] !== "\r") {
+          field += csvText[i++];
+        }
+      }
+
+      fields.push(field.trim());
+
+      if (i >= n || csvText[i] === "\n" || csvText[i] === "\r") {
+        if (i < n && csvText[i] === "\r") i++;
+        if (i < n && csvText[i] === "\n") i++;
+        break;
+      }
+      if (csvText[i] === ",") i++;
+    }
+
+    if (fields.length >= 2 && (fields[0] || fields[1])) {
+      results.push({ id: fields[0], content: fields[1] });
+    }
+  }
+
+  return results;
+}
+
+function createVoiceSelectEl(id, selectedValue) {
+  const select = document.createElement("select");
+  select.id = id;
+  select.className = "voice-select";
+  select.style.cssText = "font-size:12px;padding:4px;width:100%;";
+  voiceOptions.forEach((opt) => {
+    const option = document.createElement("option");
+    option.value = opt.value;
+    option.textContent = opt.label;
+    if (opt.value === selectedValue) option.selected = true;
+    select.appendChild(option);
+  });
+  return select;
+}
+
+function renderBatchAudioCell(cell, row, index) {
+  cell.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "audio-cell";
+
+  if (row.audioBlob) {
+    const audio = document.createElement("audio");
+    audio.controls = true;
+    audio.src = URL.createObjectURL(row.audioBlob);
+    audio.style.width = "100%";
+    wrap.appendChild(audio);
+
+    const dlBtn = document.createElement("button");
+    dlBtn.className = "download-audio-btn-small";
+    dlBtn.textContent = "⬇️ Download";
+    dlBtn.addEventListener("click", () => downloadSingleAudio(row.audioBlob, row.id));
+    wrap.appendChild(dlBtn);
+
+    const regenBtn = document.createElement("button");
+    regenBtn.className = "download-audio-btn-small";
+    regenBtn.textContent = "🔄 Regen";
+    regenBtn.style.marginLeft = "4px";
+    regenBtn.addEventListener("click", async () => {
+      batchConvRows[index].audioBlob = null;
+      renderBatchAudioCell(cell, batchConvRows[index], index);
+      await generateBatchRowAudio(index);
+    });
+    wrap.appendChild(regenBtn);
+  } else {
+    const genBtn = document.createElement("button");
+    genBtn.className = "download-audio-btn-small";
+    genBtn.textContent = "🎵 Generate";
+    genBtn.id = `batch-gen-btn-${index}`;
+    genBtn.addEventListener("click", () => generateBatchRowAudio(index));
+    wrap.appendChild(genBtn);
+  }
+
+  cell.appendChild(wrap);
+}
+
+function renderBatchTable() {
+  batchConvTableBody.innerHTML = "";
+
+  batchConvRows.forEach((row, index) => {
+    const tr = document.createElement("tr");
+
+    // ID
+    const idCell = document.createElement("td");
+    idCell.textContent = row.id;
+    idCell.style.fontWeight = "bold";
+    tr.appendChild(idCell);
+
+    // Content
+    const contentCell = document.createElement("td");
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "conversation-cell";
+    contentDiv.textContent = row.content;
+    contentCell.appendChild(contentDiv);
+    tr.appendChild(contentCell);
+
+    // Voice A
+    const voiceACell = document.createElement("td");
+    const voiceASelect = createVoiceSelectEl(`batchVoiceA-${index}`, row.voiceA);
+    voiceASelect.addEventListener("change", (e) => {
+      batchConvRows[index].voiceA = e.target.value;
+    });
+    voiceACell.appendChild(voiceASelect);
+    tr.appendChild(voiceACell);
+
+    // Voice B
+    const voiceBCell = document.createElement("td");
+    const voiceBSelect = createVoiceSelectEl(`batchVoiceB-${index}`, row.voiceB);
+    voiceBSelect.addEventListener("change", (e) => {
+      batchConvRows[index].voiceB = e.target.value;
+    });
+    voiceBCell.appendChild(voiceBSelect);
+    tr.appendChild(voiceBCell);
+
+    // Audio
+    const audioCell = document.createElement("td");
+    audioCell.id = `batch-audio-cell-${index}`;
+    renderBatchAudioCell(audioCell, row, index);
+    tr.appendChild(audioCell);
+
+    batchConvTableBody.appendChild(tr);
+  });
+}
+
+async function generateBatchRowAudio(index) {
+  const row = batchConvRows[index];
+  const settings = loadSettings();
+  const cell = document.getElementById(`batch-audio-cell-${index}`);
+  const btn = document.getElementById(`batch-gen-btn-${index}`);
+
+  if (!settings.elevenlabsApiKey) {
+    alert("Please configure ElevenLabs API Key in Settings!");
+    settingsModal.style.display = "block";
+    return;
+  }
+
+  const dialogueInputs = parseConversation(row.content, row.voiceA, row.voiceB);
+  if (dialogueInputs.length === 0) {
+    alert(`Row ${row.id}: Cannot parse conversation content.`);
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = "⏳..."; }
+
+  try {
+    const audioBlob = await convertToAudio(dialogueInputs, settings.elevenlabsApiKey);
+    batchConvRows[index].audioBlob = audioBlob;
+    if (cell) renderBatchAudioCell(cell, batchConvRows[index], index);
+  } catch (error) {
+    if (btn) { btn.disabled = false; btn.textContent = "🎵 Generate"; }
+    alert(`Error for row ${row.id}: ${error.message}`);
+  }
+}
+
+batchConvCsvInput.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  batchConvCsvName.textContent = file.name;
+
+  const csvText = await file.text();
+  const parsed = parseCSVFull(csvText);
+
+  if (parsed.length === 0) {
+    alert("No valid data found in CSV! Expected columns: ID, Content");
+    return;
+  }
+
+  batchConvRows = parsed.map((row) => ({
+    ...row,
+    voiceA: getRandomVoiceId(),
+    voiceB: getRandomVoiceId(),
+    audioBlob: null,
+  }));
+
+  renderBatchTable();
+  batchConvTableWrap.style.display = "block";
+});
+
+batchGenAllBtn.addEventListener("click", async () => {
+  const settings = loadSettings();
+  if (!settings.elevenlabsApiKey) {
+    alert("Please configure ElevenLabs API Key in Settings!");
+    settingsModal.style.display = "block";
+    return;
+  }
+
+  const pending = batchConvRows
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => !row.audioBlob);
+
+  if (pending.length === 0) {
+    alert("All rows already have audio generated!");
+    return;
+  }
+
+  batchGenAllBtn.disabled = true;
+  batchConvProgress.style.display = "block";
+  batchProgressFill.style.width = "0%";
+
+  for (let i = 0; i < pending.length; i++) {
+    const { row, idx } = pending[i];
+    batchProgressText.textContent = `Generating: ${i + 1}/${pending.length} (ID: ${row.id})`;
+
+    const dialogueInputs = parseConversation(row.content, row.voiceA, row.voiceB);
+    if (dialogueInputs.length > 0) {
+      try {
+        const audioBlob = await convertToAudio(dialogueInputs, settings.elevenlabsApiKey);
+        batchConvRows[idx].audioBlob = audioBlob;
+        const cell = document.getElementById(`batch-audio-cell-${idx}`);
+        if (cell) renderBatchAudioCell(cell, batchConvRows[idx], idx);
+      } catch (error) {
+        console.error(`Error for row ${row.id}:`, error);
+      }
+    }
+
+    batchProgressFill.style.width = `${((i + 1) / pending.length) * 100}%`;
+  }
+
+  batchProgressText.textContent = `Done: ${pending.length}/${pending.length}`;
+  batchGenAllBtn.disabled = false;
+  alert("All audio generated!");
+});
+
+batchDownloadAllBtn.addEventListener("click", async () => {
+  const audioRows = batchConvRows.filter((r) => r.audioBlob);
+  if (audioRows.length === 0) {
+    alert("No audio to download. Please generate audio first!");
+    return;
+  }
+  if (confirm(`Download ${audioRows.length} audio files one by one?`)) {
+    for (const row of audioRows) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      downloadSingleAudio(row.audioBlob, row.id);
+    }
+  }
+});
+
+// ==========================================
+// Review — Import CSV + Audio Files
+// ==========================================
+
+const importReviewCsvInput = document.getElementById("importReviewCsvInput");
+const importReviewCsvName = document.getElementById("importReviewCsvName");
+const importReviewAudioInput = document.getElementById("importReviewAudioInput");
+const importReviewAudioName = document.getElementById("importReviewAudioName");
+const importReviewLoadBtn = document.getElementById("importReviewLoadBtn");
+const importReviewTableWrap = document.getElementById("importReviewTableWrap");
+const importReviewMatchSummary = document.getElementById("importReviewMatchSummary");
+const importReviewTableBody = document.getElementById("importReviewTableBody");
+
+let importReviewAudioMap = new Map(); // id -> File
+
+importReviewCsvInput.addEventListener("change", (e) => {
+  if (e.target.files[0]) {
+    importReviewCsvName.textContent = e.target.files[0].name;
+    checkImportReviewReady();
+  }
+});
+
+importReviewAudioInput.addEventListener("change", (e) => {
+  const files = Array.from(e.target.files);
+  importReviewAudioName.textContent = `${files.length} file(s) selected`;
+
+  importReviewAudioMap = new Map();
+  files.forEach((file) => {
+    // Extract ID from filename: "001.mp3" → "001", "001_label.mp3" → "001"
+    const nameNoExt = file.name.replace(/\.[^.]+$/, "");
+    const id = nameNoExt.split("_")[0].trim();
+    importReviewAudioMap.set(id, file);
+  });
+
+  checkImportReviewReady();
+});
+
+function checkImportReviewReady() {
+  if (importReviewCsvInput.files.length > 0 && importReviewAudioInput.files.length > 0) {
+    importReviewLoadBtn.style.display = "block";
+  }
+}
+
+importReviewLoadBtn.addEventListener("click", async () => {
+  const csvFile = importReviewCsvInput.files[0];
+  const csvText = await csvFile.text();
+  const parsed = parseCSVFull(csvText);
+
+  if (parsed.length === 0) {
+    alert("No valid data in CSV! Expected columns: ID, Content");
+    return;
+  }
+
+  importReviewTableBody.innerHTML = "";
+  let matchedCount = 0;
+
+  parsed.forEach((row) => {
+    const tr = document.createElement("tr");
+
+    // ID
+    const idCell = document.createElement("td");
+    idCell.textContent = row.id;
+    idCell.style.fontWeight = "bold";
+    tr.appendChild(idCell);
+
+    // Content
+    const contentCell = document.createElement("td");
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "conversation-cell";
+    contentDiv.textContent = row.content;
+    contentCell.appendChild(contentDiv);
+    tr.appendChild(contentCell);
+
+    // Audio
+    const audioCell = document.createElement("td");
+    const audioCellDiv = document.createElement("div");
+    audioCellDiv.className = "audio-cell";
+
+    const audioFile = importReviewAudioMap.get(row.id);
+    if (audioFile) {
+      matchedCount++;
+      const audio = document.createElement("audio");
+      audio.controls = true;
+      audio.src = URL.createObjectURL(audioFile);
+      audio.style.width = "100%";
+      audioCellDiv.appendChild(audio);
+
+      const dlBtn = document.createElement("button");
+      dlBtn.className = "download-audio-btn-small";
+      dlBtn.textContent = "⬇️ Download";
+      dlBtn.addEventListener("click", () => {
+        const url = URL.createObjectURL(audioFile);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = audioFile.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+      audioCellDiv.appendChild(dlBtn);
+    } else {
+      const noMatch = document.createElement("span");
+      noMatch.className = "status-error";
+      noMatch.textContent = "No audio matched";
+      audioCellDiv.appendChild(noMatch);
+    }
+
+    audioCell.appendChild(audioCellDiv);
+    tr.appendChild(audioCell);
+    importReviewTableBody.appendChild(tr);
+  });
+
+  importReviewMatchSummary.textContent = `Matched: ${matchedCount}/${parsed.length} rows`;
+  importReviewTableWrap.style.display = "block";
+  importReviewTableWrap.scrollIntoView({ behavior: "smooth", block: "start" });
 });

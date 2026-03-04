@@ -88,6 +88,160 @@
             </div>
         </div>
 
+        <!-- Gen Audio from Existing Conversation Section -->
+        <div class="csv-batch-section">
+            <h2>🎙️ Gen Audio from Existing Conversation</h2>
+            <p class="description">Paste an existing conversation in format <code>A: text</code> / <code>B: text</code> to generate audio directly</p>
+
+            <div class="input-section">
+                <label for="existingConversationInput">Paste Conversation:</label>
+                <textarea id="existingConversationInput" rows="10" placeholder="🧑‍💼営業:「今日はありがとうございます。まずはご状況を伺って...」 ✅
+👤顧客:「はい。」 ✅
+
+または A: / B: 形式も可:
+A: こんにちは！
+B: もちろんです！"></textarea>
+            </div>
+
+            <div class="voice-selection-section">
+                <h3>🎙️ Select Voices</h3>
+                <div class="voice-selectors">
+                    <div class="voice-selector-group">
+                        <label for="existingVoiceSelectA">Voice for A:</label>
+                        <select id="existingVoiceSelectA" class="voice-select">
+                            <option value="pNInz6obpgDQGcFmaJgB">Adam - Deep Male</option>
+                            <option value="TxGEqnHWrfWFTfGW9XjX">Josh - Young Male</option>
+                            <option value="VR6AewLTigWG4xSOukaG">Arnold - Crisp Male</option>
+                            <option value="ErXwobaYiN019PkySvjV">Antoni - Well Rounded Male</option>
+                            <option value="EXAVITQu4vr4xnSDxMaL">Bella - Soft Female</option>
+                            <option value="ThT5KcBeYPX3keUQqHPh">Dorothy - Pleasant Female</option>
+                        </select>
+                    </div>
+                    <div class="voice-selector-group">
+                        <label for="existingVoiceSelectB">Voice for B:</label>
+                        <select id="existingVoiceSelectB" class="voice-select">
+                            <option value="EXAVITQu4vr4xnSDxMaL">Bella - Soft Female</option>
+                            <option value="ThT5KcBeYPX3keUQqHPh">Dorothy - Pleasant Female</option>
+                            <option value="pNInz6obpgDQGcFmaJgB">Adam - Deep Male</option>
+                            <option value="TxGEqnHWrfWFTfGW9XjX">Josh - Young Male</option>
+                            <option value="VR6AewLTigWG4xSOukaG">Arnold - Crisp Male</option>
+                            <option value="ErXwobaYiN019PkySvjV">Antoni - Well Rounded Male</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button id="genAudioFromConversationBtn" class="process-csv-btn">🎵 Generate Audio</button>
+
+            <div id="existingConvLoading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Generating audio from conversation...</p>
+            </div>
+
+            <div id="existingConvAudioPlayer" class="audio-player" style="display: none;">
+                <h3>Audio Player:</h3>
+                <audio id="existingConvAudioElement" controls></audio>
+                <div class="audio-controls">
+                    <div class="speed-control">
+                        <label for="existingConvAudioSpeed">⚡ Playback Speed:</label>
+                        <select id="existingConvAudioSpeed" class="speed-select">
+                            <option value="0.5">0.5x (Slow)</option>
+                            <option value="0.75">0.75x</option>
+                            <option value="1" selected>1x (Normal)</option>
+                            <option value="1.25">1.25x</option>
+                            <option value="1.5">1.5x (Fast)</option>
+                            <option value="1.75">1.75x</option>
+                            <option value="2">2x (Very Fast)</option>
+                        </select>
+                    </div>
+                    <button id="existingConvDownloadBtn" class="download-btn">⬇️ Download Audio</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Import Conversations Section -->
+        <div class="csv-batch-section">
+            <h2>📋 Batch Import Conversations</h2>
+            <p class="description">Import CSV (columns: <strong>ID</strong>, <strong>Content</strong>) to generate audio in batch</p>
+
+            <div class="csv-upload-section">
+                <label for="batchConvCsvInput" class="csv-upload-label">
+                    📁 Import CSV
+                    <input type="file" id="batchConvCsvInput" accept=".csv" style="display: none;">
+                </label>
+                <span id="batchConvCsvName" class="csv-file-name">No file selected</span>
+            </div>
+
+            <div id="batchConvTableWrap" style="display: none;">
+                <div class="results-actions">
+                    <button id="batchGenAllBtn" class="process-csv-btn">🎵 Generate All Audio</button>
+                    <button id="batchDownloadAllBtn" class="download-all-audio-btn">⬇️ Download All Audio</button>
+                </div>
+
+                <div id="batchConvProgress" style="display: none;">
+                    <div class="progress-bar">
+                        <div id="batchProgressFill" class="progress-bar-fill"></div>
+                    </div>
+                    <p id="batchProgressText" class="progress-text">Processing: 0/0</p>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">ID</th>
+                                <th>Content</th>
+                                <th style="width: 120px;">Voice 営業 (A)</th>
+                                <th style="width: 120px;">Voice 顧客 (B)</th>
+                                <th style="width: 220px;">Audio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batchConvTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Review: Import CSV + Audio Section -->
+        <div class="csv-batch-section">
+            <h2>🔍 Review — Import CSV + Audio</h2>
+            <p class="description">Import CSV (ID, Content) and audio files — matched by ID</p>
+
+            <div class="csv-upload-section">
+                <label for="importReviewCsvInput" class="csv-upload-label">
+                    📄 Import CSV (ID, Content)
+                    <input type="file" id="importReviewCsvInput" accept=".csv" style="display: none;">
+                </label>
+                <span id="importReviewCsvName" class="csv-file-name">No file selected</span>
+            </div>
+
+            <div class="csv-upload-section">
+                <label for="importReviewAudioInput" class="csv-upload-label">
+                    🎵 Import Audio Files
+                    <input type="file" id="importReviewAudioInput" accept="audio/*" multiple style="display: none;">
+                </label>
+                <span id="importReviewAudioName" class="csv-file-name">No files selected</span>
+            </div>
+
+            <button id="importReviewLoadBtn" class="process-csv-btn" style="display: none;">🔍 Load &amp; Match</button>
+
+            <div id="importReviewTableWrap" style="display: none;">
+                <p id="importReviewMatchSummary" class="progress-text"></p>
+                <div style="overflow-x: auto;">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">ID</th>
+                                <th>Content</th>
+                                <th style="width: 240px;">Audio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="importReviewTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- CSV Batch Processing Section -->
         <div class="csv-batch-section">
             <h2>📊 CSV Batch Processing</h2>
